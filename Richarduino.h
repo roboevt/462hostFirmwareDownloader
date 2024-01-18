@@ -47,7 +47,7 @@ struct Richarduino {
     }
 
     void write(std::string data) {
-        int num_written = ::write(portFd, "V", 1);
+        int num_written = ::write(portFd, data.c_str(), data.size());
         if (num_written < 0) { /* handle error */
             abort();
         }
@@ -56,9 +56,9 @@ struct Richarduino {
 
     std::string read(int n) {
         std::vector<char> data(n);
-        std::cout << "Before read" << std::endl;
+        // std::cout << "Before read" << std::endl;
         int num_read = ::read(portFd, data.data(), n);
-        std::cout << "After read" << std::endl;
+        // std::cout << "After read" << std::endl;
         // Processing
         if (num_read == n) {
             return std::string(data.begin(), data.end());
