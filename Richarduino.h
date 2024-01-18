@@ -16,6 +16,7 @@ struct Richarduino {
     int baud;
 
     Richarduino(std::string location, int baud) : baud(baud) {
+        // serial tty code adapted from SerialPort_RevB Connor Monohan 2021
         // Open serial port connection
         std::cout << "Opening serial port " << location << std::endl;
         portFd = open(location.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
@@ -27,22 +28,20 @@ struct Richarduino {
             abort();
         }
         // Set baud rate
-        cfsetispeed(&tty, baud);
-        cfsetospeed(&tty, baud);
+        cfsetspeed(&tty, baud);
 
-        if (tcsetattr(portFd, TCSANOW, &tty) != 0) { /* handle error */
-            abort();
+        if (tcsetattr(portFd, TCSANOW, &tty) != 0) {
+            throw std::runtime_error("Failed to set serial port attributes");
         }
     }
 
     ~Richarduino() {
-        std::cout << "Closing serial port" << std::endl;
         close(portFd);
     }
 
     void write(std::string data) {
         int num_written = ::write(portFd, data.c_str(), data.size());
-        if (num_written < 0 || num_written < data.size()) { /* handle error */
+        if (num_written < 0 || num_written < data.size()) {  // handle error
             std::cout << "Error: Wrote " << num_written << " bytes, expected " << data.size()
                       << std::endl;
         }
@@ -50,6 +49,7 @@ struct Richarduino {
 
     void write(uint32_t data) {
         std::vector<char> dataBytes(4);
+        // Convert data to bytes (big endian)
         dataBytes[0] = (data >> 24) & 0xFF;
         dataBytes[1] = (data >> 16) & 0xFF;
         dataBytes[2] = (data >> 8) & 0xFF;
@@ -68,9 +68,9 @@ struct Richarduino {
     }
 
     int version() {
-        // write("V");
+        write("V");
         std::string response = read(1);
-        return stoi(response);
+        return std::stoi(response);
     }
 
     void program(std::vector<uint32_t> program) {
@@ -79,6 +79,7 @@ struct Richarduino {
         int programLength = program.size() * 4;  // 4 bytes per instruction
 
         std::vector<char> programLengthBytes(4);
+        // Convert program length to bytes (big endian)
         programLengthBytes[0] = (programLength >> 24) & 0xFF;
         programLengthBytes[1] = (programLength >> 16) & 0xFF;
         programLengthBytes[2] = (programLength >> 8) & 0xFF;
@@ -107,6 +108,7 @@ struct Richarduino {
 
         std::string response = read(4);
         int responseInt = 0;
+        // Convert response to int (big endian)
         responseInt |= response[0] << 24;
         responseInt |= response[1] << 16;
         responseInt |= response[2] << 8;
