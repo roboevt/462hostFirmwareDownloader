@@ -47,26 +47,6 @@ struct Richarduino {
         }
     }
 
-    void poke(int32_t addr, int32_t data) {
-        std::string pokeCommand = "W";
-        write(pokeCommand);
-        write(addr);
-        write(data);
-    }
-
-    int peek(int32_t addr) {
-        std::string peekCommand = "R";
-        write(peekCommand);
-        write(addr);
-        std::string response = read(4);
-        int responseInt = 0;
-        responseInt |= response[0] << 24;
-        responseInt |= response[1] << 16;
-        responseInt |= response[2] << 8;
-        responseInt |= response[3];
-        return responseInt;
-    }
-
     void write(int32_t data) {
         std::vector<char> dataBytes(4);
         dataBytes[0] = (data >> 24) & 0xFF;
@@ -85,5 +65,47 @@ struct Richarduino {
         }
         std::cout << "Error: Read " << num_read << " bytes, expected " << n << std::endl;
         return "";
+    }
+
+    void program(std::vector<int32_t> program) {
+        std::cout << "Uploading program..." << std::endl;
+
+        int programLength = program.size() * 4;  // 4 bytes per instruction
+
+        std::vector<char> programLengthBytes(4);
+        programLengthBytes[0] = (programLength >> 24) & 0xFF;
+        programLengthBytes[1] = (programLength >> 16) & 0xFF;
+        programLengthBytes[2] = (programLength >> 8) & 0xFF;
+        programLengthBytes[3] = programLength & 0xFF;
+        std::string programLengthString(programLengthBytes.begin(), programLengthBytes.end());
+
+        // Program command
+        write("P");
+        write(programLengthString);
+
+        // Program data
+        for (int32_t instruction : program) {
+            write(instruction);
+        }
+    }
+
+    void poke(int32_t addr, int32_t data) {
+        std::string pokeCommand = "W";
+        write(pokeCommand);
+        write(addr);
+        write(data);
+    }
+
+    int peek(int32_t addr) {
+        std::string peekCommand = "R";
+        write(peekCommand);
+        write(addr);
+        std::string response = read(4);
+        int responseInt = 0;
+        responseInt |= response[0] << 24;
+        responseInt |= response[1] << 16;
+        responseInt |= response[2] << 8;
+        responseInt |= response[3];
+        return responseInt;
     }
 };

@@ -50,41 +50,6 @@ std::vector<int32_t> readFirmware(std::string firmwarePath) {
     return firmware;
 }
 
-int uploadFirmware(std::vector<int32_t> firmware, Richarduino& richarduino) {
-    std::cout << "Uploading firmware..." << std::endl;
-
-    int programLength = firmware.size() * 4;  // 4 bytes per instruction
-
-    std::vector<char> programLengthBytes(4);
-    programLengthBytes[0] = (programLength >> 24) & 0xFF;
-    programLengthBytes[1] = (programLength >> 16) & 0xFF;
-    programLengthBytes[2] = (programLength >> 8) & 0xFF;
-    programLengthBytes[3] = programLength & 0xFF;
-    std::string programLengthString(programLengthBytes.begin(), programLengthBytes.end());
-
-    // Program command
-    richarduino.write("P");
-
-    // Length
-    std::cout << "Sending length " << programLengthString << std::endl;
-    richarduino.write(std::string(programLengthString));
-
-    // Program instructions
-    for (int32_t instruction : firmware) {
-        std::vector<char> instructionBytes(4);
-        instructionBytes[0] = (instruction >> 24) & 0xFF;
-        instructionBytes[1] = (instruction >> 16) & 0xFF;
-        instructionBytes[2] = (instruction >> 8) & 0xFF;
-        instructionBytes[3] = instruction & 0xFF;
-        std::string instructionString(instructionBytes.begin(), instructionBytes.end());
-
-        std::cout << "Sending instruction " << std::hex << instruction << std::endl;
-        richarduino.write(std::string(instructionString));
-    }
-
-    return 0;
-}
-
 auto main(int argc, char** argv) -> int {
     std::string firmwarePath = "firmware.bin";
     std::string richarduinoPort = "/dev/ttyUSB1";
@@ -100,7 +65,13 @@ auto main(int argc, char** argv) -> int {
         std::cout << "Peek " << std::hex << i << ": " << richarduino.peek(i) << std::endl;
     }
 
-    // std::vector<int32_t> firmware = readFirmware(firmwarePath);
+    std::cout << "Peek 4096: " << richarduino.peek(4096) << std::endl;
+    richarduino.poke(4096, 2);
+    std::cout << "Peek 4096: " << richarduino.peek(4096) << std::endl;
+    richarduino.poke(4096, -1);
+    std::cout << "Peek 4096: " << richarduino.peek(4096) << std::endl;
 
-    // uploadFirmware(firmware, richarduino);
+    std::vector<int32_t> firmware = readFirmware(firmwarePath);
+
+    richarduino.program(firmware);
 }
