@@ -42,12 +42,13 @@ struct Richarduino {
 
     void write(std::string data) {
         int num_written = ::write(portFd, data.c_str(), data.size());
-        if (num_written < 0) { /* handle error */
-            abort();
+        if (num_written < 0 || num_written < data.size()) { /* handle error */
+            std::cout << "Error: Wrote " << num_written << " bytes, expected " << data.size()
+                      << std::endl;
         }
     }
 
-    void write(int32_t data) {
+    void write(uint32_t data) {
         std::vector<char> dataBytes(4);
         dataBytes[0] = (data >> 24) & 0xFF;
         dataBytes[1] = (data >> 16) & 0xFF;
@@ -60,14 +61,19 @@ struct Richarduino {
         std::vector<char> data(n);
         int num_read = ::read(portFd, data.data(), n);
         // Processing
-        if (num_read == n) {
-            return std::string(data.begin(), data.end());
+        if (num_read != n) {
+            std::cout << "Error: Read " << num_read << " bytes, expected " << n << std::endl;
         }
-        std::cout << "Error: Read " << num_read << " bytes, expected " << n << std::endl;
-        return "";
+        return std::string(data.begin(), data.begin() + num_read);
     }
 
-    void program(std::vector<int32_t> program) {
+    int version() {
+        // write("V");
+        std::string response = read(1);
+        return stoi(response);
+    }
+
+    void program(std::vector<uint32_t> program) {
         std::cout << "Uploading program..." << std::endl;
 
         int programLength = program.size() * 4;  // 4 bytes per instruction
@@ -84,22 +90,21 @@ struct Richarduino {
         write(programLengthString);
 
         // Program data
-        for (int32_t instruction : program) {
+        for (uint32_t instruction : program) {
             write(instruction);
         }
     }
 
-    void poke(int32_t addr, int32_t data) {
-        std::string pokeCommand = "W";
-        write(pokeCommand);
+    void poke(uint32_t addr, uint32_t data) {
+        write("W");
         write(addr);
         write(data);
     }
 
-    int peek(int32_t addr) {
-        std::string peekCommand = "R";
-        write(peekCommand);
+    int peek(uint32_t addr) {
+        write("R");
         write(addr);
+
         std::string response = read(4);
         int responseInt = 0;
         responseInt |= response[0] << 24;

@@ -25,10 +25,10 @@ int parseArgs(int argc, char** argv, std::string& firmwarePath, std::string& ric
     return 0;
 }
 
-std::vector<int32_t> readFirmware(std::string firmwarePath) {
+std::vector<uint32_t> readFirmwareFile(std::string firmwarePath) {
     std::ifstream firmwareFile(firmwarePath);
 
-    int address;
+    uint32_t address;
     firmwareFile >> std::hex >> address;
     if (address != 4096) {
         std::cout << "Invalid firmware file, first address must be 4096, was " +
@@ -37,15 +37,20 @@ std::vector<int32_t> readFirmware(std::string firmwarePath) {
         return {};
     }
 
-    std::vector<int32_t> firmware;
+    std::vector<uint32_t> firmware;
 
+    std::cout << "Reading firmware from " << firmwarePath << ". Firmware: " << std::endl;
+
+    hex(std::cout);
     while (firmwareFile.good()) {
-        int instruction;
-        firmwareFile >> address >> instruction;
-        firmware.push_back(instruction);
+        uint32_t instruction;
+        if (firmwareFile >> address >> instruction) {
+            firmware.push_back(instruction);
 
-        std::cout << address << " " << instruction << std::endl;
+            std::cout << address << ": " << instruction << std::endl;
+        }
     }
+    dec(std::cout);
 
     return firmware;
 }
@@ -58,20 +63,9 @@ auto main(int argc, char** argv) -> int {
     }
 
     Richarduino richarduino(richarduinoPort, B115200);
-    richarduino.write("V");
-    std::cout << "Firmware version: " << richarduino.read(1) << std::endl;
 
-    for(int i = 0; i < 128; i+= 4) {
-        std::cout << "Peek " << std::hex << i << ": " << richarduino.peek(i) << std::endl;
-    }
-
-    std::cout << "Peek 4096: " << richarduino.peek(4096) << std::endl;
-    richarduino.poke(4096, 2);
-    std::cout << "Peek 4096: " << richarduino.peek(4096) << std::endl;
-    richarduino.poke(4096, -1);
-    std::cout << "Peek 4096: " << richarduino.peek(4096) << std::endl;
-
-    std::vector<int32_t> firmware = readFirmware(firmwarePath);
+    std::vector<uint32_t> firmware = readFirmwareFile(firmwarePath);
 
     richarduino.program(firmware);
+
 }
