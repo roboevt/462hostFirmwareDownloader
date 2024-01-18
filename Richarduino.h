@@ -22,7 +22,6 @@ struct Richarduino {
         if (portFd < 0) {
             throw std::runtime_error("Failed to open serial port");
         }
-        std::cout << "Got port fd " << portFd << std::endl;
         // Edit settings
         if (tcgetattr(portFd, &tty) != 0) { /* handle error */
             abort();
@@ -30,11 +29,6 @@ struct Richarduino {
         // Set baud rate
         cfsetispeed(&tty, baud);
         cfsetospeed(&tty, baud);
-        // cfsetspeed(&tty, baud);
-
-        tty.c_cc[VTIME] = 5;
-        tty.c_cc[VMIN] = 0;
-        tty.c_lflag = 0;
 
         if (tcsetattr(portFd, TCSANOW, &tty) != 0) { /* handle error */
             abort();
@@ -51,19 +45,45 @@ struct Richarduino {
         if (num_written < 0) { /* handle error */
             abort();
         }
-        std::cout << "Wrote " << num_written << " bytes" << std::endl;
+    }
+
+    void poke(int32_t addr, int32_t data) {
+        std::string pokeCommand = "W";
+        write(pokeCommand);
+        write(addr);
+        write(data);
+    }
+
+    int peek(int32_t addr) {
+        std::string peekCommand = "R";
+        write(peekCommand);
+        write(addr);
+        std::string response = read(4);
+        int responseInt = 0;
+        responseInt |= response[0] << 24;
+        responseInt |= response[1] << 16;
+        responseInt |= response[2] << 8;
+        responseInt |= response[3];
+        return responseInt;
+    }
+
+    void write(int32_t data) {
+        std::vector<char> dataBytes(4);
+        dataBytes[0] = (data >> 24) & 0xFF;
+        dataBytes[1] = (data >> 16) & 0xFF;
+        dataBytes[2] = (data >> 8) & 0xFF;
+        dataBytes[3] = data & 0xFF;
+        write(std::string(dataBytes.begin(), dataBytes.end()));
     }
 
     std::string read(int n) {
         std::vector<char> data(n);
-        // std::cout << "Before read" << std::endl;
         int num_read = ::read(portFd, data.data(), n);
-        // std::cout << "After read" << std::endl;
         // Processing
         if (num_read == n) {
             return std::string(data.begin(), data.end());
         }
-        std::cout << "Read " << num_read << " bytes, expected " << n << std::endl;
+        std::cout << "Error: Read " << num_read << " bytes, expected " << n << std::endl;
         return "";
     }
 };
